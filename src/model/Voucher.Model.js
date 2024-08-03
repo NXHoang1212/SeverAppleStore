@@ -1,0 +1,74 @@
+const { default: mongoose } = require('mongoose');
+const objectId = mongoose.Schema.Types.ObjectId;
+
+const voucherSchema = new mongoose.Schema({
+    userUsed: [
+        {
+            type: objectId,
+            ref: 'users'
+        }
+    ],
+    usersApplicable: [
+        {
+            type: objectId,
+            ref: 'users'
+        }
+    ],
+    name: {
+        type: String,
+        required: true,
+    },
+    images: {
+        type: String,
+        required: true,
+    },
+    code: {
+        type: String,
+        required: true,
+    },
+    discount: {
+        type: Number,
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+    },
+    condition: {
+        type: String,
+        required: true,
+    },
+    maxDiscountAmount: {
+        type: Number,
+        default: 500000
+    },
+    minOrderAmount: {
+        type: Number,
+        default: 0
+    },
+    usageLimit: {
+        type: Number,
+        default: 100
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['Nhận hàng tại nhà', 'Vnpay', 'Ngân hàng', 'Chuyển khoản', 'Trả góp'],
+        default: 'Nhận hàng tại nhà'
+    },
+    status: {
+        type: String,
+        enum: ['active', 'expired', 'used', 'inactive'],
+        default: 'active'
+    },
+    expirationDate: {
+        type: Date,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const VoucherModel = mongoose.model('vouchers', voucherSchema);
+module.exports = VoucherModel;

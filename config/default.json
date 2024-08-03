@@ -1,0 +1,7 @@
+{
+  "vnp_TmnCode":"QCC4NHKU",
+  "vnp_HashSecret":"8A3ZK23J0YRWU81OV4154N67ROOKIHA9",
+  "vnp_Url":"https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+  "vnp_Api":"https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+  "vnp_ReturnUrl": "https://severapplestore.onrender.com/api/order/vnpay_return"
+} 
