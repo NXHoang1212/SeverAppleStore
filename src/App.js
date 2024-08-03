@@ -22,6 +22,7 @@ const favouritesRouter = require('./router/Favourites.Router');
 const cartRouter = require('./router/Cart.Router')
 const voucherRouter = require('./router/Voucher.Router')
 const orderRouter = require('./router/Order.Router')
+// const notificationRouter = require('./router/Notification.Router')
 
 //env
 require('dotenv').config();
@@ -44,6 +45,7 @@ app.use('/api/favourites', favouritesRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/voucher', voucherRouter);
 app.use('/api/order', orderRouter);
+// app.use('/api/notie', notificationRouter)
 
 
 databse.connect();
@@ -64,5 +66,3 @@ server.listen(process.env.PORT, (error) => {
 
 //Error Middleware
 app.use(ErrorMiddleware);
-// 6e4430eb19543df2a9a077ca1198141b908fe8d4   7fc68b0c88e21b03e2fb38a43cb0c08e2a1545b6
-

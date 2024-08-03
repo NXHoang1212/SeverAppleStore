@@ -85,7 +85,7 @@ class AuthService {
 
     async loginProvider(photoUrl, provider) {
         try {
-            const user = await UserModel.findOne({ provider:provider });
+            const user = await UserModel.findOne({ provider: provider });
             if (!user) {
                 const newUser = new UserModel({
                     photoUrl: photoUrl,
@@ -355,6 +355,56 @@ class AuthService {
             }
         } catch (error) {
             console.log("🚀 ~ AuthService ~ uploadAvatar ~ error:", error)
+            return {
+                status: 400,
+                message: error.message,
+                data: null
+            }
+        }
+    }
+
+    async updateFcmToken(id, fcmToken) {
+        try {
+            const user = await UserModel.findById(id);
+            if (!user) {
+                throw new Error("Không tìm thấy người dùng");
+            }
+            const updateFcmToken = await UserModel.findByIdAndUpdate(
+                id,
+                { $push: { fcmToken: fcmToken } },
+                { new: true }
+            );
+            return {
+                status: 200,
+                message: "Cập nhật fcmToken thành công",
+                data: updateFcmToken
+            }
+        } catch (error) {
+            return {
+                status: 400,
+                message: error.message,
+                data: null
+            }
+        }
+    }
+
+    async removeFcmToken(id, fcmToken) {
+        try {
+            const user = await UserModel.findById(id);
+            if (!user) {
+                throw new Error("Không tìm thấy người dùng");
+            }
+            const removeFcmToken = await UserModel.findByIdAndUpdate(
+                id,
+                { $pull: { fcmToken: fcmToken } },
+                { new: true }
+            );
+            return {
+                status: 200,
+                message: "Xóa fcmToken thành công",
+                data: removeFcmToken
+            }
+        } catch (error) {
             return {
                 status: 400,
                 message: error.message,

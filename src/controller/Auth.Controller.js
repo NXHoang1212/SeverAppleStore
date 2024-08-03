@@ -174,6 +174,36 @@ class AuthController {
             return response.sendError(res, error);
         }
     }
+
+    async updateFcmToken(req, res) {
+        try {
+            const { id } = req.params;
+            const { fcmToken } = req.body;
+            const result = await AuthService.updateFcmToken(id, fcmToken);
+            if (result.status === 200) {
+                response.sendSuccess(res, result.message, result.data);
+            } else {
+                response.sendError(res, result.message);
+            }
+        } catch (error) {
+            return response.sendError(res, error);
+        }
+    }
+
+    async removeFcmToken(req, res) {
+        try {
+            const { id } = req.params;
+            const { fcmToken } = req.body;
+            const result = await AuthService.removeFcmToken(id, fcmToken);
+            if (result.status === 200) {
+                response.sendSuccess(res, result.message, result.data);
+            } else {
+                response.sendError(res, result.message);
+            }
+        } catch (error) {
+            return response.sendError(res, error);
+        }
+    }
 }
 
 module.exports = new AuthController();

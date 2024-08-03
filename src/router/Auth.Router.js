@@ -26,4 +26,8 @@ Router.post('/resetPasswordFromMail', AuthController.resetPasswordFromMail);
 
 Router.put('/uploadAvatar/:id', uploadAvatar, AuthController.uploadAvatar);
 
+Router.put('/updateFcmToken/:id', AuthController.updateFcmToken);
+
+Router.put('/removeFcmToken/:id', AuthController.removeFcmToken);
+
 module.exports = Router;
