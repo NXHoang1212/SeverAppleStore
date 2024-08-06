@@ -6,12 +6,17 @@ const NotificationSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    content: {
+    body: {
         type: String,
         required: true,
     },
-    type: {
-        type: String,
+    data: {
+        type: Object,
+        required: true,
+    },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users',
         required: true,
     },
     isRead: {
@@ -22,6 +27,11 @@ const NotificationSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
+    },
+    
 });
 
 const Notification = mongoose.model('notifications', NotificationSchema);

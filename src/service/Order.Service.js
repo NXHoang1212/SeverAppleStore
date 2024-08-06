@@ -4,6 +4,7 @@ const querystring = require('qs');
 const crypto = require('crypto');
 const config = require('config');
 const generateOrderCode = require('../utils/GenerateOrderCode')
+const { sendNotification } = require('../utils/HandlePushNotification')
 
 function sortObject(obj) {
     try {
@@ -123,6 +124,16 @@ class OrderService {
                         order.paymentStatus = 'Đã thanh toán';
                         order.updatedAt = Date.now();
                         await order.save();
+                        if (order.user.fcmToken) {
+                            let title = 'Đơn hàng của bạn đã được thanh toán';
+                            let body = `Đơn hàng ${order.orderCode} của bạn đã được thanh toán thành công`;
+                            let data = {
+                                type: 'orderSuccess',
+                            };
+                            await sendNotification(order.user.fcmToken, title, body, data);
+                        } else {
+                            console.log('No fcmToken found');
+                        }
                         return {
                             code: '00',
                             message: 'Success',
@@ -132,6 +143,16 @@ class OrderService {
                         order.paymentStatus = 'Chờ thanh toán';
                         order.updatedAt = Date.now();
                         await order.save();
+                        if (order.user.fcmToken) {
+                            let title = 'Đơn hàng của bạn chưa được thanh toán';
+                            let body = `Đơn hàng ${order.orderCode} của bạn chưa được thanh toán`;
+                            let data = {
+                                type: 'orderFailed',
+                            };
+                            await sendNotification(order.user.fcmToken, title, body, data);
+                        } else {
+                            console.log('No fcmToken found');
+                        }
                         return {
                             code: '01',
                             message: 'Unsuccessful payment',
@@ -251,7 +272,7 @@ class OrderService {
 
     static async getOrdersByUser(user) {
         try {
-            const orders = await orderModel.find({ user: user }).populate('shippingAddress').populate('voucher');
+            const orders = await orderModel.find({ user: user }).populate('shippingAddress').populate('voucher').populate('user');
             if (!orders) {
                 return {
                     status: 404,
@@ -281,7 +302,7 @@ class OrderService {
                     { status: { $in: status }, status: { $nin: ["Đang giao", "Đã giao", "Đã hủy"] } },
                     { paymentStatus: { $in: paymentStatus }, status: { $nin: ["Đang giao", "Đã giao", "Đã hủy"] } }
                 ]
-            }).populate('shippingAddress').populate('voucher');
+            }).populate('shippingAddress').populate('voucher').populate('user');
             if (!orders) {
                 return {
                     status: 404,
@@ -305,7 +326,7 @@ class OrderService {
 
     static async getOrdersById(id) {
         try {
-            const order = await orderModel.findById(id).populate('shippingAddress').populate('voucher');
+            const order = await orderModel.findById(id).populate('shippingAddress').populate('voucher').populate('user');
             return {
                 status: 200,
                 message: 'Successfully fetched order',
@@ -364,7 +385,20 @@ class OrderService {
                 paymentCode: paymentCode,
                 orderCode: orderCode,
             });
-            await newOrder.save();
+            const order = await newOrder.save();
+            const populatedOrder = await orderModel.findById(order._id).populate('shippingAddress').populate('voucher').populate('user');
+            if (populatedOrder.user && populatedOrder.user.fcmToken) {
+                let token = populatedOrder.user.fcmToken;
+                let title = 'Đơn hàng của bạn đã được tạo thành công';
+                let body = `Đơn hàng ${order.orderCode} của bạn đã được tạo thành công`;
+                let data = {
+                    type: 'orderSuccess',
+                };
+                await sendNotification(token, title, body, data);
+                console.log('Sent notification');
+            } else {
+                console.log('No fcmToken found');
+            }
             return {
                 status: 200,
                 message: 'Order created successfully',
