@@ -22,6 +22,7 @@ const favouritesRouter = require('./router/Favourites.Router');
 const cartRouter = require('./router/Cart.Router')
 const voucherRouter = require('./router/Voucher.Router')
 const orderRouter = require('./router/Order.Router')
+const notificationRouter = require('./router/Notification.Router')
 
 //env
 require('dotenv').config();
@@ -44,6 +45,7 @@ app.use('/api/favourites', favouritesRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/voucher', voucherRouter);
 app.use('/api/order', orderRouter);
+app.use('/api/notifee', notificationRouter);
 
 
 databse.connect();
@@ -64,35 +66,3 @@ server.listen(process.env.PORT, (error) => {
 
 //Error Middleware
 app.use(ErrorMiddleware);
-
-// const { JWT } = require('google-auth-library');
-
-// const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
-
-// // function getAccessToken() {
-// //   return new Promise(function(resolve, reject) {
-// //     const key = require('../json/service-account.json'); // Đường dẫn tới tệp JSON của bạn
-// //     const jwtClient = new JWT(
-// //       key.client_email,
-// //       null,
-// //       key.private_key,
-// //       SCOPES,
-// //       null
-// //     );
-// //     jwtClient.authorize(function(err, tokens) {
-// //       if (err) {
-// //         reject(err);
-// //         return;
-// //       }
-// //       resolve(tokens.access_token);
-// //     });
-// //   });
-// // }
-// // // Gọi hàm và xử lý kết quả
-// // getAccessToken()
-// //   .then(accessToken => {
-// //     console.log('Access Token:', accessToken);
-// //   })
-// //   .catch(error => {
-// //     console.error('Error getting access token:', error);
-// //   });
