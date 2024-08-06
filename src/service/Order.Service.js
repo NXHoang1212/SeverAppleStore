@@ -388,11 +388,13 @@ class OrderService {
             const order = await newOrder.save();
             const populatedOrder = await orderModel.findById(order._id).populate('shippingAddress').populate('voucher').populate('user');
             if (populatedOrder.user && populatedOrder.user.fcmToken) {
-                let token = populatedOrder.user.fcmToken;
-                let title = 'Đơn hàng của bạn đã được tạo thành công';
-                let body = `Đơn hàng ${order.orderCode} của bạn đã được tạo thành công`;
-                let data = {
+                const token = populatedOrder.user.fcmToken;
+                const title = 'Đơn hàng của bạn đã được tạo thành công';
+                const body = `Đơn hàng ${order.orderCode} của bạn đã được tạo thành công`;
+                const data = {
                     type: 'orderSuccess',
+                    userId: populatedOrder.user._id,
+                    orderId: populatedOrder._id,
                 };
                 await sendNotification(token, title, body, data);
                 console.log('Sent notification');

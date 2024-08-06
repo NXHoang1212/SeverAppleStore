@@ -1,6 +1,6 @@
-const notificationModel = require('../model/Notification.Model')
 const { JWT } = require('google-auth-library');
 const axios = require('axios');
+const notificationService = require('../service/Notification.Service')
 
 const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
 
@@ -51,6 +51,11 @@ const sendNotification = async (fcmTokens, title, body, data) => {
         try {
             const response = await axios.request(config);
             console.log('Sent notification:', JSON.stringify(response.data));
+            await notificationService.createNotification({
+                title: title,
+                body: body,
+                data: data,
+            });
         } catch (error) {
             console.log('Error sending notification:', error);
         }
