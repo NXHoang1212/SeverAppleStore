@@ -1,31 +1,6 @@
 const notificationService = require('../service/Notification.Service')
 
 class NotificationController {
-    static async createNotification(req, res) {
-        try {
-            const notificationData = {
-                title: req.body.title,
-                body: req.body.body,
-                data: req.body.data,
-                userId: req.body.userId,
-                type: req.body.type,
-                orderId: req.body.orderId,
-            };
-            const notification = await notificationService.createNotification(notificationData);
-            return res.status(200).json({
-                status: 200,
-                message: 'Successfully created notification',
-                data: notification,
-            });
-        } catch (error) {
-            return res.status(500).json({
-                status: 500,
-                message: error.message,
-                data: null,
-            });
-        }
-    }
-
     static async getNotifications(req, res) {
         try {
             const { userId } = req.params;

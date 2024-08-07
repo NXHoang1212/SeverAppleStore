@@ -118,7 +118,7 @@ class OrderService {
             let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
 
             if (secureHash === signed) {
-                let order = await orderModel.findOne({ paymentCode: vnp_Params['vnp_TxnRef'] });
+                let order = await orderModel.findOne({ paymentCode: vnp_Params['vnp_TxnRef'] }).populate('user');
                 if (order) {
                     if (vnp_Params['vnp_ResponseCode'] === "00") {
                         order.paymentStatus = 'Đã thanh toán';
@@ -386,7 +386,7 @@ class OrderService {
                 orderCode: orderCode,
             });
             const order = await newOrder.save();
-            const populatedOrder = await orderModel.findById(order._id).populate('shippingAddress').populate('voucher').populate('user');
+            const populatedOrder = await orderModel.findById(order._id).populate('user');
             if (populatedOrder.user && populatedOrder.user.fcmToken) {
                 const token = populatedOrder.user.fcmToken;
                 const title = 'Đơn hàng của bạn đã được tạo thành công';
