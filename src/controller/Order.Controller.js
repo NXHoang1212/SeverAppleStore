@@ -185,6 +185,24 @@ class OrderController {
             });
         }
     }
+
+    static async getAllOrders(req, res) {
+        try {
+            const result = await orderService.getAllOrders();
+            return res.status(200).json({
+                status: 200,
+                message: result.message,
+                data: result.data,
+            });
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
+
 }
 
 module.exports = OrderController;

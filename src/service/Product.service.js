@@ -4,7 +4,7 @@ const { uploadFileAWS, deleteFileAWS } = require('../middleware/UploadFormAws');
 class ProductService {
     static async createProduct(req, res) {
         try {
-            const { name, model, storage, priceColor, description, category, brand, stock, specifications, discount, status } = req.body;
+            const { name, model, storage, priceColor, description, category, brand, stock, specifications, discount, status, condition } = req.body;
             const images = req.files;
             const imagesUrl = [];
             for (const image of images) {
@@ -23,15 +23,17 @@ class ProductService {
                 stock,
                 specifications: JSON.parse(specifications),
                 discount: JSON.parse(discount),
-                status
+                status,
+                condition
             });
             const result = await newProduct.save();
             return {
                 status: 201,
                 message: 'Sản phẩm đã được tạo thành công',
-                data: result
+                data: result,
             }
         } catch (error) {
+            console.log("🚀 ~ ProductService ~ createProduct ~ error:", error)
             return {
                 status: 500,
                 message: error.message,

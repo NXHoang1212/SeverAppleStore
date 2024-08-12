@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const orderController = require('../controller/Order.Controller')
 
-
+/*User Router*/
 router.post('/create_payment_url', orderController.createPaymentUrl);
 
 router.get('/vnpay_return', orderController.handleVnpayReturnUrl);
@@ -19,5 +19,13 @@ router.get('/get_orders_user_status/:user', orderController.getOrdersByStatus);
 router.put('/update_order/:id', orderController.updateOrder);
 
 router.post('/create_order', orderController.createOrder);
+
+/*Admin Router*/
+router.get('/admin/get_all_orders', orderController.getAllOrders);
+
+router.put('/admin/update_order/:id', orderController.updateOrder);
+
+
+
 
 module.exports = router;

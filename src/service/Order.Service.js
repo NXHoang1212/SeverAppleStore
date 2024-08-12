@@ -415,6 +415,23 @@ class OrderService {
         }
     }
 
+    static async getAllOrders() {
+        try {
+            const orders = await orderModel.find().populate('shippingAddress').populate('voucher').populate('user');
+            return {
+                status: 200,
+                message: 'Successfully fetched orders',
+                data: orders,
+            };
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
+
 }
 
 module.exports = OrderService;
