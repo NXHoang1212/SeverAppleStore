@@ -3,12 +3,14 @@ const BannerController = require('../controller/Banner.Controller');
 const { uploadMulterSingle } = require('../middleware/UploadFormAws');
 
 
-Router.post('/create', uploadMulterSingle, BannerController.createBanner);
+Router.post('/admin/create', uploadMulterSingle, BannerController.createBanner);
 
 Router.get('/get-all', BannerController.getAllBanner);
 
-Router.put('/update/:id', uploadMulterSingle, BannerController.updateBanner);
+Router.get('/admin/detail/:id', BannerController.getBannerById);
 
-Router.delete('/delete/:id', BannerController.deleteBanner);
+Router.put('/admin/update/:id', uploadMulterSingle, BannerController.updateBanner);
+
+Router.delete('/admin/delete/:id', BannerController.deleteBanner);
 
 module.exports = Router;

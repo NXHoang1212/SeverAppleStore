@@ -20,6 +20,16 @@ class BannerController {
         }
     }
 
+    static async getBannerById(req, res) {
+        try {
+            const { id } = req.params;
+            const result = await bannerService.getBannerById(id);
+            response.sendSuccess(res, result.message, result.data);
+        } catch (error) {
+            response.sendError(res, error.message);
+        }
+    }
+
     static async updateBanner(req, res) {
         try {
             const { id } = req.params;

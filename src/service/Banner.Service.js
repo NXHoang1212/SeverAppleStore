@@ -43,6 +43,30 @@ class BannerService {
         }
     }
 
+    static async getBannerById(id) {
+        try {
+            const banner = await bannerModel.findById(id);
+            if (!banner) {
+                return {
+                    status: 404,
+                    message: 'Không tìm thấy banner',
+                    data: null
+                }
+            }
+            return {
+                status: 200,
+                message: 'Banner',
+                data: banner
+            }
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null
+            }
+        }
+    }
+
     static async updateBanner(id, req) {
         try {
             const { title } = req.body;
@@ -89,6 +113,7 @@ class BannerService {
                 data: null
             }
         } catch (error) {
+            console.log("🚀 ~ BannerService ~ deleteBanner ~ error:", error)
             return {
                 status: 500,
                 message: error.message,

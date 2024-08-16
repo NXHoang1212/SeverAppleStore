@@ -10,7 +10,7 @@ router.get('/detail/:id', voucherController.getVoucherById);
 
 router.post('/use', voucherController.useVoucher);
 
-router.delete('/delete/:id', voucherController.deleteVoucher);
+router.delete('/admin/delete/:id', voucherController.deleteVoucher);
 
 router.put('/update/:id', uploadMulterSingle, voucherController.updateVoucher);
 
