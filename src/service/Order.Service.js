@@ -432,6 +432,27 @@ class OrderService {
         }
     }
 
+    //làm một hàm lấy khách hàng đã mua hàng và thanh toán thành công
+    static async getOrdersByStatusAndPaymentStatus(status, paymentStatus) {
+        try {
+            const orders = await orderModel.find({
+                status: { $in: status },
+                paymentStatus: { $in: paymentStatus },
+            }).populate('shippingAddress').populate('voucher').populate('user');
+            return {
+                status: 200,
+                message: 'Successfully fetched orders',
+                data: orders,
+            };
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
+
 }
 
 module.exports = OrderService;

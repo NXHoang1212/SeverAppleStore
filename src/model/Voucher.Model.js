@@ -16,27 +16,21 @@ const voucherSchema = new mongoose.Schema({
     ],
     name: {
         type: String,
-        required: true,
     },
     images: {
         type: String,
-        required: true,
     },
     code: {
         type: String,
-        required: true,
     },
     discount: {
         type: Number,
-        required: true,
     },
     description: {
         type: String,
-        required: true,
     },
     condition: {
         type: String,
-        required: true,
     },
     maxDiscountAmount: {
         type: Number,
@@ -62,7 +56,6 @@ const voucherSchema = new mongoose.Schema({
     },
     expirationDate: {
         type: Date,
-        required: true
     },
     createdAt: {
         type: Date,

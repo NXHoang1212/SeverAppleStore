@@ -2,11 +2,10 @@ const voucherModal = require('../model/Voucher.Model')
 const { uploadVoucherAws, deleteVoucherAws } = require('../middleware/UploadOtherAws')
 
 class VoucherService {
-    static async createVoucher(
-        name, code, discount, description, maxDiscountAmount, minOrderAmount,
-        expirationDate, usageLimit, paymentMethod, usersApplicable, images, condition
-    ) {
+    static async createVoucher(req, res) {
         try {
+            const { name, code, discount, description, maxDiscountAmount, minOrderAmount, usageLimit, paymentMethod, usersApplicable, expirationDate, condition } = req.body;
+            const images = req.file;
             const data = await uploadVoucherAws(images);
             const newVoucher = new voucherModal({
                 name,
@@ -29,6 +28,7 @@ class VoucherService {
                 data: result
             }
         } catch (error) {
+            console.log("🚀 ~ VoucherService ~ createVoucher ~ error:", error)
             return {
                 status: 500,
                 message: error.message,
@@ -69,10 +69,9 @@ class VoucherService {
         }
     }
 
-
     static async getVoucherById(id) {
         try {
-            const result = await voucherModal.findById(id);
+            const result = await voucherModal.findById(id).populate('usersApplicable');
             return {
                 status: 200,
                 message: 'Voucher detail',
@@ -86,6 +85,7 @@ class VoucherService {
             }
         }
     }
+
     static async useVoucher(id, userId, paymentMethod) {
         try {
             const voucher = await voucherModal.findById(id);
@@ -168,7 +168,7 @@ class VoucherService {
                 };
             }
             await deleteVoucherAws(voucher.images.split('/').pop());
-            await voucher.remove();
+            await voucherModal.findByIdAndDelete(id);
             return {
                 status: 200,
                 message: 'Voucher deleted successfully',
@@ -220,6 +220,58 @@ class VoucherService {
         }
     }
 
+    static async updateAdminVoucher(id, req) {
+        try {
+            const { name, code, discount, description, maxDiscountAmount, minOrderAmount, expirationDate, usageLimit, paymentMethod, condition } = req.body;
+            const images = req.file;
+            const voucher = await voucherModal.findById(id);
+            if (!voucher) {
+                return {
+                    status: 404,
+                    message: 'Voucher not found',
+                    data: null
+                };
+            }
+            const updateData = {
+                name,
+                code,
+                discount,
+                description,
+                maxDiscountAmount,
+                minOrderAmount,
+                expirationDate,
+                usageLimit,
+                paymentMethod,
+                usersApplicable: JSON.parse(usersApplicable),
+                condition
+            }
+            //nếu có ảnh thì upload ảnh mới lên aws và lấy link ảnh mới để update vào db
+            if (images) {
+                const data = await uploadVoucherAws(images);
+                updateData.images = data.Location;
+            } else {
+                updateData.images = voucher.images;
+            }
+            const result = await voucherModal.findByIdAndUpdate(id,
+                updateData,
+                { new: true }
+            )
+            return {
+                status: 200,
+                message: 'Voucher updated successfully',
+                data: result
+            }
+
+        } catch (error) {
+            console.log("🚀 ~ VoucherService ~ updateAdminVoucher ~ error:", error)
+            return {
+                status: 500,
+                message: error.message,
+                data: null
+            };
+        }
+    }
+
     static async resetVoucherUsage(id, userId) {
         try {
             const voucher = await voucherModal.findById(id);
@@ -252,6 +304,23 @@ class VoucherService {
                 status: 200,
                 message: 'Voucher usage reset successfully',
                 data: voucher
+            };
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null
+            };
+        }
+    }
+
+    static async getAllVoucher() {
+        try {
+            const vouchers = await voucherModal.find().populate('usersApplicable');
+            return {
+                status: 200,
+                message: 'List of all vouchers',
+                data: vouchers
             };
         } catch (error) {
             return {

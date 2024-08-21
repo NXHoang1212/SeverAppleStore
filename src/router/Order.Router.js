@@ -25,6 +25,7 @@ router.get('/admin/get_all_orders', orderController.getAllOrders);
 
 router.put('/admin/update_order/:id', orderController.updateOrder);
 
+router.get('/admin/get_orders_status_paymentStatus', orderController.getOrdersByStatusAndPaymentStatus);
 
 
 

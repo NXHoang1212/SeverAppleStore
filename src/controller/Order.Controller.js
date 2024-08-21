@@ -203,6 +203,26 @@ class OrderController {
         }
     }
 
+    static async getOrdersByStatusAndPaymentStatus(req, res) {
+        try {
+            const { status, paymentStatus } = req.query;
+            const statusArray = status.split(',');
+            const paymentStatusArray = paymentStatus.split(',');
+            const result = await orderService.getOrdersByStatusAndPaymentStatus(statusArray, paymentStatusArray);
+            return res.status(200).json({
+                status: 200,
+                message: result.message,
+                data: result.data,
+            });
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
+
 }
 
 module.exports = OrderController;

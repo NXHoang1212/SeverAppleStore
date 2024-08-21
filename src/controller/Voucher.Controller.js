@@ -4,9 +4,7 @@ const response = require('../utils/ResponseUtil');
 class VoucherController {
     static async createVoucher(req, res) {
         try {
-            const { name, code, discount, description, maxDiscountAmount, minOrderAmount, usageLimit, paymentMethod, usersApplicable, expirationDate, condition } = req.body;
-            const images = req.file;
-            const result = await voucherService.createVoucher(name, code, discount, description, condition, maxDiscountAmount, minOrderAmount, expirationDate, usageLimit, paymentMethod, usersApplicable, images);
+            const result = await voucherService.createVoucher(req, res);
             response.sendCreated(res, result.message, result.data);
         } catch (error) {
             response.sendError(res, error.message);
@@ -64,10 +62,29 @@ class VoucherController {
         }
     }
 
+    static async updateAdminVoucher(req, res) {
+        try {
+            const { id } = req.params;
+            const result = await voucherService.updateAdminVoucher(id, req);
+            response.sendSuccess(res, result.message, result.data);
+        } catch (error) {
+            response.sendError(res, error.message);
+        }
+    }
+
     static async resetVoucherUsage(req, res) {
         try {
             const { id, userId } = req.body;
             const result = await voucherService.resetVoucherUsage(id, userId);
+            response.sendSuccess(res, result.message, result.data);
+        } catch (error) {
+            response.sendError(res, error.message);
+        }
+    }
+
+    static async getAllVoucher(req, res) {
+        try {
+            const result = await voucherService.getAllVoucher();
             response.sendSuccess(res, result.message, result.data);
         } catch (error) {
             response.sendError(res, error.message);
