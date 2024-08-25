@@ -4,8 +4,12 @@ const notificationController = require('../controller/Notification.Controller')
 
 router.get('/get/:userId', notificationController.getNotifications);
 
-router.put('/update/:notificationId', notificationController.updateNotification);
+router.put('/admin/update/:notificationId', notificationController.updateNotification);
 
-router.delete('/delete/:notificationId', notificationController.deleteNotification);
+router.post('/admin/createNotifications', notificationController.createNotification);
+
+router.delete('/admin/delete/:notificationId', notificationController.deleteNotification);
+
+router.get('/admin/getNotification', notificationController.getAdminNotifications);
 
 module.exports = router;

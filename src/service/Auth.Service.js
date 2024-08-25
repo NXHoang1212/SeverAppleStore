@@ -61,27 +61,40 @@ class AuthService {
     async login(email, phone, password) {
         try {
             let user = await UserModel.findOne({ email: email }) || await UserModel.findOne({ phone: phone });
+            //nếu không tìm thấy user thì tạo user admin mặc định để đăng nhập vào hệ thống còn không có thì sẽ là user thông thường 
             if (!user) {
                 const adminEmail = "hoangxuan@gmail.com";
-                const adminPassword = "0123456789";
-
+                const adminPassword = "012345678";
                 if (email === adminEmail && password === adminPassword) {
-                    user = new UserModel({
+                    //nếu tk admin không tồn tại thì tạo tk admin mặc định còn nếu có thì cho đăng nhập vào hệ thống
+                    const salt = await bcrypt.genSaltSync(10);
+                    const hashPassword = await bcrypt.hashSync(adminPassword, salt);
+                    const newUser = new UserModel({
                         email: adminEmail,
-                        phone: null,
-                        password: await bcrypt.hash(adminPassword, 10),
-                        role: 'admin'
+                        password: hashPassword,
+                        role: "admin"
                     });
-                    await user.save();
+                    const saveUser = await newUser.save();
+                    return {
+                        status: 200,
+                        message: "Đăng nhập thành công",
+                        data: saveUser
+                    }
                 } else {
                     throw new Error("Email or phone not found");
                 }
-            }
-            if (!await bcrypt.compare(password, user.password)) {
-                throw new Error("Password is incorrect");
-            }
-            if (user.role !== 'admin') {
-                throw new Error("Bạn không có quyền truy cập");
+            } else {
+                if (email && !user.email) {
+                    throw new Error("Email is incorrect");
+                }
+                if (phone && !user.phone) {
+                    throw new Error("Phone is incorrect");
+                }
+                const isPasswordMatch = await bcrypt.compare(password, user.password);
+                if (!isPasswordMatch) {
+                    throw new Error("Password is incorrect");
+                }
+
             }
             const token = jwt.sign({ user }, process.env.TOKEN_SECRET, { expiresIn: '1h' });
             return {
@@ -98,7 +111,6 @@ class AuthService {
             };
         }
     }
-
 
     async loginProvider(photoUrl, provider) {
         try {
@@ -420,6 +432,30 @@ class AuthService {
                 status: 200,
                 message: "Xóa fcmToken thành công",
                 data: removeFcmToken
+            }
+        } catch (error) {
+            return {
+                status: 400,
+                message: error.message,
+                data: null
+            }
+        }
+    }
+
+    async getAllUser() {
+        try {
+            // Tìm những user có fcmToken và không có role là admin
+            const users = await UserModel.find({ role: "user", fcmToken: { $exists: true, $not: { $size: 0 } } });
+            console.log("🚀 ~ AuthService ~ getAllUser ~ users:", users.length)
+
+            if (users.length === 0) { // Kiểm tra xem có user nào thỏa điều kiện không
+                throw new Error("Không tìm thấy người dùng");
+            }
+
+            return {
+                status: 200,
+                message: "Tìm người dùng thành công",
+                data: users
             }
         } catch (error) {
             return {

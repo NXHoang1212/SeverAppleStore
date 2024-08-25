@@ -27,6 +27,7 @@ router.put('/admin/update_order/:id', orderController.updateOrder);
 
 router.get('/admin/get_orders_status_paymentStatus', orderController.getOrdersByStatusAndPaymentStatus);
 
+router.put('/admin/confim_order/:id', orderController.adminConfirmOrder);
 
 
 module.exports = router;

@@ -66,3 +66,31 @@ server.listen(process.env.PORT, (error) => {
 
 //Error Middleware
 app.use(ErrorMiddleware);
+
+// const { JWT } = require('google-auth-library');
+// const axios = require('axios');
+// const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
+
+// function getAccessToken() {
+//     return new Promise(function (resolve, reject) {
+//         const key = require('../json/service-account.json');
+//         const jwtClient = new JWT(
+//             key.client_email,
+//             null,
+//             key.private_key,
+//             SCOPES,
+//             null
+//         );
+        
+//         jwtClient.authorize(function (err, tokens) {
+//             if (err) {
+//                 reject(err);
+//                 return;
+//             }
+//             resolve(tokens.access_token);
+//             console.log('Access Token:', tokens.access_token);
+//         });
+//     });
+// }
+
+// const token = getAccessToken();

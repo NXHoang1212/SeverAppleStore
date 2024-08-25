@@ -30,4 +30,6 @@ Router.put('/updateFcmToken/:id', AuthController.updateFcmToken);
 
 Router.put('/removeFcmToken/:id', AuthController.removeFcmToken);
 
+Router.get('/admin/getAllUsers', AuthController.getAllUser);
+
 module.exports = Router;

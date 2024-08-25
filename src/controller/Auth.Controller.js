@@ -204,6 +204,19 @@ class AuthController {
             return response.sendError(res, error);
         }
     }
+
+    async getAllUser(req, res) {
+        try {
+            const result = await AuthService.getAllUser();
+            if (result.status === 200) {
+                response.sendSuccess(res, result.message, result.data);
+            } else {
+                response.sendError(res, result.message);
+            }
+        } catch (error) {
+            return response.sendError(res, error);
+        }
+    }
 }
 
 module.exports = new AuthController();

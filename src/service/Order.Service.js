@@ -352,7 +352,19 @@ class OrderService {
                 };
             }
             const updatedOrder = await orderModel.findByIdAndUpdate
-                (id, data, { new: true })
+                (id, data, { new: true }).populate('user');
+            if (order.user.fcmToken) {
+                const token = order.user.fcmToken;
+                const title = 'Đơn hàng của bạn đã được hủy';
+                const body = `Đơn hàng ${order.orderCode} của bạn đã bị hủy`;
+                const data = {
+                    type: 'orderFailed',
+                    userId: order.user._id,
+                    orderId: order._id,
+                };np
+                await sendNotification(token, title, body, data);
+                console.log('Sent notification');
+            }
             return {
                 status: 200,
                 message: 'Order updated successfully',
@@ -432,7 +444,6 @@ class OrderService {
         }
     }
 
-    //làm một hàm lấy khách hàng đã mua hàng và thanh toán thành công
     static async getOrdersByStatusAndPaymentStatus(status, paymentStatus) {
         try {
             const orders = await orderModel.find({
@@ -453,6 +464,78 @@ class OrderService {
         }
     }
 
+    static async adminConfirmOrder(id, data) {
+        try {
+            const order = await orderModel.findById(id).populate('user');
+            if (!order) {
+                return {
+                    status: 404,
+                    message: 'Order not found',
+                    data: null,
+                };
+            }
+
+            const updatedOrder = await orderModel.findByIdAndUpdate(
+                id,
+                data,
+                { new: true, runValidators: true }
+            ).populate('user');
+
+            if (updatedOrder.user.fcmToken && updatedOrder.user.fcmToken.length > 0) {
+                const token = updatedOrder.user.fcmToken;
+                let title, body, notificationData;
+
+                if (data.status === 'Đã xác nhận') {
+                    title = 'Đơn hàng của bạn đã được xác nhận';
+                    body = `Đơn hàng ${updatedOrder.orderCode} của bạn đã được xác nhận thành công vào lúc ${moment(updatedOrder.updatedAt).format('HH:mm DD/MM/YYYY')}`;
+                    notificationData = {
+                        type: 'orderSuccess',
+                        userId: updatedOrder.user._id,
+                        orderId: updatedOrder._id,
+                    };
+                } else if (data.status === 'Đang giao') {
+                    title = 'Đơn hàng của bạn đang được giao';
+                    body = `Đơn hàng ${updatedOrder.orderCode} của bạn đang trên đường đến bạn`;
+                    notificationData = {
+                        type: 'orderSuccess',
+                        userId: updatedOrder.user._id,
+                        orderId: updatedOrder._id,
+                    };
+                } else if (data.status === 'Đã giao hàng') {
+                    title = 'Đơn hàng của bạn đã được giao';
+                    body = `Đơn hàng ${updatedOrder.orderCode} của bạn đã được giao thành công`;
+                    notificationData = {
+                        type: 'orderSuccess',
+                        userId: updatedOrder.user._id,
+                        orderId: updatedOrder._id,
+                    };
+                } else if (data.status === 'Đã hủy') {
+                    title = 'Đơn hàng của bạn đã bị hủy';
+                    body = `Đơn hàng ${updatedOrder.orderCode} của bạn đã bị hủy`;
+                    notificationData = {
+                        type: 'orderFailed',
+                        userId: updatedOrder.user._id,
+                        orderId: updatedOrder._id,
+                    };
+                }
+                if (title && body && notificationData) {
+                    await sendNotification(token, title, body, notificationData);
+                }
+            }
+            return {
+                status: 200,
+                message: 'Order updated successfully',
+                data: updatedOrder,
+            };
+        } catch (error) {
+            console.error('Error in adminConfirmOrder:', error);
+            return {
+                status: 500,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
 }
 
 module.exports = OrderService;
