@@ -474,7 +474,6 @@ class OrderService {
                     data: null,
                 };
             }
-
             const updatedOrder = await orderModel.findByIdAndUpdate(
                 id,
                 data,
