@@ -5,6 +5,7 @@ const storage = multer.memoryStorage();
 const uploadMulter = multer({ storage: storage }).array('images');
 const uploadMulterSingle = multer({ storage: storage }).single('images');
 const uploadAvatar = multer({ storage: storage }).single('photoUrl');
+const uploadMulterMedia = multer({ storage: storage }).array('media', 5);
 
 const s3 = new S3Client({
     region: process.env.AWS_BUCKET_REGION,
@@ -61,4 +62,4 @@ const deleteFileAWS = async (key) => {
 };
 
 
-module.exports = { s3, uploadMulter, uploadMulterSingle, uploadAvatar, uploadFileAWS, deleteFileAWS };
+module.exports = { s3, uploadMulter, uploadMulterMedia, uploadMulterSingle, uploadAvatar, uploadFileAWS, deleteFileAWS };

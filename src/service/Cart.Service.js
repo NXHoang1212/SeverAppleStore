@@ -122,7 +122,7 @@ class CartService {
 
     static async updateCartStatusIds(ids, status) {
         try {
-            const carts = await cartModel.updateMany({ _id: { $in: ids } }, { status: status });
+            const carts = await cartModel.updateMany({ "products._id": { $in: ids } }, { status: status });
             if (!carts) {
                 throw new Error('No carts found');
             }
@@ -132,6 +132,7 @@ class CartService {
                 data: carts
             };
         } catch (error) {
+            console.log("🚀 ~ CartService ~ updateCartStatusIds ~ error:", error)
             return {
                 status: 500,
                 message: error.message,

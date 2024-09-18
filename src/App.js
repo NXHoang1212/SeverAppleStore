@@ -23,6 +23,7 @@ const cartRouter = require('./router/Cart.Router')
 const voucherRouter = require('./router/Voucher.Router')
 const orderRouter = require('./router/Order.Router')
 const notificationRouter = require('./router/Notification.Router')
+const evaluateRouter = require('./router/Evaluate.Router')
 
 //env
 require('dotenv').config();
@@ -46,6 +47,7 @@ app.use('/api/cart', cartRouter);
 app.use('/api/voucher', voucherRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/notifee', notificationRouter);
+app.use('/api/evaluate', evaluateRouter);
 
 
 databse.connect();

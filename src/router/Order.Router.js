@@ -29,5 +29,10 @@ router.get('/admin/get_orders_status_paymentStatus', orderController.getOrdersBy
 
 router.put('/admin/confirm_order/:id', orderController.adminConfirmOrder);
 
+router.get('/admin/getTopProducts', orderController.getTopProducts);
+
+router.get('/admin/getRevenue/:period', orderController.getRevenueByDate);
+
+router.get('/admin/compare-revenuen', orderController.getCompareRevenue);
 
 module.exports = router;

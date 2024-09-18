@@ -343,7 +343,7 @@ class OrderService {
 
     static async updateOrder(id, data) {
         try {
-            const order = await orderModel.findById(id);
+            const order = await orderModel.findById(id).populate('user');
             if (!order) {
                 return {
                     status: 404,
@@ -352,16 +352,16 @@ class OrderService {
                 };
             }
             const updatedOrder = await orderModel.findByIdAndUpdate
-                (id, data, { new: true }).populate('user');
+                (id, data, { new: true, runValidators: true })
             if (order.user.fcmToken) {
                 const token = order.user.fcmToken;
                 const title = 'Đơn hàng của bạn đã được hủy';
-                const body = `Đơn hàng ${order.orderCode} của bạn đã bị hủy`;
+                const body = `Đơn hàng ${order.orderCode} của bạn đã bị hủy vào lúc ${moment(updatedOrder.updatedAt).format('HH:mm DD/MM/YYYY')}`;
                 const data = {
                     type: 'orderFailed',
                     userId: order.user._id,
                     orderId: order._id,
-                };np
+                }; np
                 await sendNotification(token, title, body, data);
                 console.log('Sent notification');
             }
@@ -535,6 +535,181 @@ class OrderService {
             };
         }
     }
+
+    static async getTopProducts() {
+        try {
+            const orders = await orderModel.find({ status: 'Đã giao' });
+            let products = [];
+            orders.forEach(order => {
+                order.products.forEach(product => {
+                    let found = products.find(p => p._id.toString() === product._id.toString());
+                    if (found) {
+                        found.quantity += product.quantity;
+                    } else {
+                        products.push({
+                            _id: product._id,
+                            quantity: product.quantity,
+                        });
+                    }
+                });
+            });
+            products.sort((a, b) => b.quantity - a.quantity);
+            return {
+                status: 200,
+                message: 'Successfully fetched top products',
+                data: products,
+            };
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
+
+    static async getRevenueByDate(period) {
+        try {
+            const now = new Date();
+            let startDate;
+
+            // Xác định thời gian bắt đầu theo khoảng thời gian yêu cầu
+            switch (period) {
+                case 'daily':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'weekly':
+                    const day = now.getDay(); // Ngày trong tuần
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+                    break;
+                case 'monthly':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+                case 'yearly':
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    break;
+                default:
+                    throw new Error('Không hỗ trợ thống kê theo khoảng thời gian này');
+            }
+
+            const orders = await orderModel.aggregate([
+                {
+                    $match: {
+                        status: 'Đã giao',
+                        updatedAt: { $gte: startDate, $lte: now }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: { $sum: '$totalAmount' }
+                    }
+                }
+            ]);
+
+            const totalRevenue = orders.length > 0 ? orders[0].totalRevenue : 0;
+
+            return {
+                status: 200,
+                message: 'Successfully fetched revenue',
+                data: { totalRevenue, period },
+            };
+
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
+
+    static async getCompareRevenue() {
+        try {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            // Hàm tính toán số ngày trong năm
+            function getDayOfYear(date) {
+                const start = new Date(date.getFullYear(), 0, 0);
+                const diff = date - start;
+                const oneDay = 1000 * 60 * 60 * 24;
+                return Math.floor(diff / oneDay);
+            }
+
+            // Hàm tính toán ISO week của năm
+            function getISOWeek(date) {
+                const target = new Date(date.valueOf());
+                const dayNr = (date.getDay() + 6) % 7;
+                target.setDate(target.getDate() - dayNr + 3);
+                const firstThursday = target.valueOf();
+                target.setMonth(0, 1);
+                if (target.getDay() !== 4) {
+                    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+                }
+                return 1 + Math.ceil((firstThursday - target) / (7 * 24 * 60 * 60 * 1000));
+            }
+
+            const result = await orderModel.aggregate([
+                {
+                    $match: {
+                        createdAt: {
+                            $gte: new Date(now.getFullYear() - 1, 0, 1),
+                            $lt: new Date(now.getFullYear() + 1, 0, 1)
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            year: { $year: "$createdAt" },
+                            month: { $month: "$createdAt" },
+                            week: { $isoWeek: "$createdAt" },
+                            day: { $dayOfYear: "$createdAt" }
+                        },
+                        totalRevenue: { $sum: "$totalAmount" }
+                    }
+                }
+            ]);
+
+            // Tính toán doanh thu
+            const todayRevenue = result.find(r => r._id.year === now.getFullYear() && r._id.day === getDayOfYear(today))?.totalRevenue || 0;
+            const yesterdayRevenue = result.find(r => r._id.year === now.getFullYear() && r._id.day === getDayOfYear(yesterday))?.totalRevenue || 0;
+
+            const thisWeekRevenue = result.filter(r => r._id.year === now.getFullYear() && r._id.week === getISOWeek(now)).reduce((sum, r) => sum + r.totalRevenue, 0);
+            const lastWeekRevenue = result.filter(r => r._id.year === now.getFullYear() && r._id.week === (getISOWeek(now) - 1)).reduce((sum, r) => sum + r.totalRevenue, 0);
+
+            const thisMonthRevenue = result.filter(r => r._id.year === now.getFullYear() && r._id.month === (now.getMonth() + 1)).reduce((sum, r) => sum + r.totalRevenue, 0);
+            const lastMonthRevenue = result.filter(r => r._id.year === now.getFullYear() && r._id.month === (now.getMonth())).reduce((sum, r) => sum + r.totalRevenue, 0);
+
+            const thisYearRevenue = result.filter(r => r._id.year === now.getFullYear()).reduce((sum, r) => sum + r.totalRevenue, 0);
+            const lastYearRevenue = result.filter(r => r._id.year === now.getFullYear() - 1).reduce((sum, r) => sum + r.totalRevenue, 0);
+
+            return {
+                status: 200,
+                message: 'Successfully fetched revenue',
+                data: {
+                    todayRevenue,
+                    yesterdayRevenue,
+                    thisWeekRevenue,
+                    lastWeekRevenue,
+                    thisMonthRevenue,
+                    lastMonthRevenue,
+                    thisYearRevenue,
+                    lastYearRevenue
+                },
+            }
+        } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null,
+            };
+        }
+    }
+
 }
 
 module.exports = OrderService;

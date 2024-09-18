@@ -243,6 +243,56 @@ class OrderController {
         }
     }
 
+    static async getTopProducts(req, res) {
+        try {
+            const result = await orderService.getTopProducts();
+            return res.status(200).json({
+                status: 200,
+                message: result.message,
+                data: result.data,
+            });
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
+
+    static async getRevenueByDate(req, res) {
+        try {
+            const result = await orderService.getRevenueByDate(req.params.period);
+            return res.status(200).json({
+                status: 200,
+                message: result.message,
+                data: result.data,
+            });
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
+
+    static async getCompareRevenue(req, res) {
+        try {
+            const result = await orderService.getCompareRevenue();
+            return res.status(200).json({
+                status: 200,
+                message: result.message,
+                data: result.data,
+            });
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
 }
 
 module.exports = OrderController;
