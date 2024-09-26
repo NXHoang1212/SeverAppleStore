@@ -2,9 +2,8 @@ const express = require('express');
 const { createServer } = require('http');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const io = require('socket.io')
 const path = require('path');
-
+const socketServer = require('./middleware/SocketIO.middleware');
 //error middleware
 const ErrorMiddleware = require('./middleware/Error.middleware');
 const CreateError = require('http-errors');
@@ -30,7 +29,6 @@ require('dotenv').config();
 
 const app = express();
 const server = createServer(app);
-const socket = io(server);
 
 app.use(cors());
 app.use(express.json());
@@ -65,6 +63,11 @@ server.listen(process.env.PORT, (error) => {
     }
     console.log(`🚀 ~ Server is running on port ~ ${process.env.PORT} 🚀`);
 });
+
+// Khởi chạy server socket
+const socketPort = process.env.SOCKET_PORT || 5000;
+socketServer(socketPort);
+console.log(`🚀 ~ Socket server is running on port ~ ${socketPort} 🚀`);
 
 //Error Middleware
 app.use(ErrorMiddleware);

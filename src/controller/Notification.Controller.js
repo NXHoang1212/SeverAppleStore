@@ -23,11 +23,33 @@ class NotificationController {
         try {
             const { userId } = req.params;
             const notifications = await notificationService.getNotifications(userId);
-            return res.status(200).json({
-                status: 200,
-                message: 'Successfully retrieved notifications',
-                data: notifications,
+            return res.status(notifications.status).json(notifications);
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
             });
+        }
+    }
+
+    static async updateNotificationUser(req, res) {
+        try {   
+            const notification = await notificationService.updateNotificationUser(req.body);
+            return res.status(notification.status).json(notification);
+        } catch (error) {
+            return res.status(500).json({
+                status: 500,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
+
+    static async deleteNotificationUser(req, res) {
+        try {
+            const notification = await notificationService.deleteNotificationUser(req.params.id);
+            return res.status(notification.status).json(notification);
         } catch (error) {
             return res.status(500).json({
                 status: 500,

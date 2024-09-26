@@ -102,22 +102,81 @@ class NotificationService {
         }
     }
 
-    static async getNotifications(userId) {
+    static async getNotifications(data) {
         try {
-            const notifications = await notificationModel.findOne({ userId: userId });
-            if (!notifications) {
-                return {
-                    status: 200,
-                    message: 'Notifications retrieved successfully',
-                    data: []
-                }
-            }
+            const notifications = await notificationModel.find({ 'data.userId': data }).populate('data.userId').populate('data.orderId');
+
             return {
                 status: 200,
                 message: 'Notifications retrieved successfully',
                 data: notifications
             }
         } catch (error) {
+            return {
+                status: 500,
+                message: error.message,
+                data: null
+            }
+        }
+    }
+
+    // Cập nhật nhiều thông báo đã đọc
+    static async updateNotificationUser(data) {
+        try {
+            // Tìm các thông báo chưa đọc
+            const unreadNotifications = await notificationModel.find({
+                'data.userId': data.userId,
+                isRead: false
+            });
+
+            // Nếu không có thông báo nào chưa đọc, trả về kết quả
+            if (unreadNotifications.length === 0) {
+                return {
+                    status: 200,
+                    message: 'All notifications are already read',
+                    data: null
+                };
+            }
+
+            // Cập nhật những thông báo chưa đọc thành đã đọc
+            const result = await notificationModel.updateMany(
+                { 'data.userId': data.userId, isRead: false },
+                { isRead: true }
+            );
+
+            return {
+                status: 200,
+                message: 'Unread notifications updated successfully',
+                data: result
+            };
+        } catch (error) {
+            console.log("🚀 ~ NotificationService ~ updateNotificationUser ~ error:", error)
+            return {
+                status: 500,
+                message: error.message,
+                data: null
+            };
+        }
+    }
+
+    static async deleteNotificationUser(id) {
+        try {
+            const notification = await notificationModel.findById(id);
+            if (!notification) {
+                return {
+                    status: 404,
+                    message: 'Notification not found',
+                    data: null
+                }
+            }
+            const result = await notificationModel.findByIdAndDelete(id);
+            return {
+                status: 200,
+                message: 'Notification deleted successfully',
+                data: result
+            }
+        } catch (error) {
+            console.log("🚀 ~ NotificationService ~ deleteNotificationUser ~ error:", error)
             return {
                 status: 500,
                 message: error.message,

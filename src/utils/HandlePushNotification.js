@@ -27,6 +27,12 @@ const getAccessToken = () => {
 const sendNotification = async (fcmTokens, title, body, data) => {
     let tokens = Array.isArray(fcmTokens) ? fcmTokens : [fcmTokens];
     for (let token of tokens) {
+
+        if (!isValidToken(token)) {
+            console.log(`Invalid token: ${token}`);
+            continue; // Bỏ qua token không hợp lệ
+        }
+
         let payload = {
             message: {
                 token: token,

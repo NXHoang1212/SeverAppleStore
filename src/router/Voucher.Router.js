@@ -6,6 +6,8 @@ router.post('/admin/create', uploadMulterSingle, voucherController.createVoucher
 
 router.get('/list/:usersApplicable', voucherController.getVoucherList);
 
+router.get('/detail/:id', voucherController.getVoucherById);
+
 router.post('/use', voucherController.useVoucher);
 
 router.put('/update/:id', uploadMulterSingle, voucherController.updateVoucher);

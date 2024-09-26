@@ -361,7 +361,7 @@ class OrderService {
                     type: 'orderFailed',
                     userId: order.user._id,
                     orderId: order._id,
-                }; np
+                };
                 await sendNotification(token, title, body, data);
                 console.log('Sent notification');
             }
@@ -480,8 +480,8 @@ class OrderService {
                 { new: true, runValidators: true }
             ).populate('user');
 
-            if (updatedOrder.user.fcmToken && updatedOrder.user.fcmToken.length > 0) {
-                const token = updatedOrder.user.fcmToken;
+            if (order.user.fcmToken && order.user.fcmToken.length > 0) {
+                const token = order.user.fcmToken;
                 let title, body, notificationData;
 
                 if (data.status === 'Đã xác nhận') {
@@ -500,7 +500,7 @@ class OrderService {
                         userId: updatedOrder.user._id,
                         orderId: updatedOrder._id,
                     };
-                } else if (data.status === 'Đã giao hàng') {
+                } else if (data.status === 'Đã giao') {
                     title = 'Đơn hàng của bạn đã được giao';
                     body = `Đơn hàng ${updatedOrder.orderCode} của bạn đã được giao thành công`;
                     notificationData = {

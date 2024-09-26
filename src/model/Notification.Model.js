@@ -1,4 +1,5 @@
 const { default: mongoose } = require('mongoose');
+const objectId = mongoose.Schema.Types.ObjectId;
 
 const NotificationSchema = new mongoose.Schema({
     title: {
@@ -10,8 +11,10 @@ const NotificationSchema = new mongoose.Schema({
         required: true,
     },
     data: {
-        type: Object,
-        required: true,
+        type: { type: String },
+        id: { type: String },
+        userId: { type: objectId, ref: 'users' },
+        orderId: { type: objectId, ref: 'orders' },
     },
     isRead: {
         type: Boolean,
