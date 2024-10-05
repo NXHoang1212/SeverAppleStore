@@ -50,9 +50,6 @@ app.use('/api/evaluate', evaluateRouter);
 
 databse.connect();
 
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'pug');
-
 app.use((req, res, next) => {
     next(CreateError(404, '🚀 Not Found 🚀'));
 });
@@ -64,9 +61,10 @@ server.listen(process.env.PORT, (error) => {
     console.log(`🚀 ~ Server is running on port ~ ${process.env.PORT} 🚀`);
 });
 
-// Khởi chạy server socket
 const socketPort = process.env.SOCKET_PORT || 5000;
+
 socketServer(socketPort);
+
 console.log(`🚀 ~ Socket server is running on port ~ ${socketPort} 🚀`);
 
 //Error Middleware

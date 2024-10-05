@@ -1,88 +1,154 @@
 const { Server } = require('socket.io');
+const moment = require('moment');
+const { uploadSocketChatAws } = require('./UploadOtherAws');
+
+const getVietnamTime = () => {
+    return moment().utcOffset('+0700').format('HH:mm');
+};
 
 const socketServer = (socketPort) => {
     const io = new Server(socketPort, {
         cors: {
-            origin: 'http://localhost:5000', // Thay bằng domain của bạn nếu cần
+            origin: 'http://localhost:5000',
             methods: ['GET', 'POST'],
         },
     });
 
-    const users = {}; // Lưu người dùng theo socketId
-    const rooms = {}; // Lưu danh sách phòng và người dùng trong từng phòng
-    const waitingUsers = []; // Lưu danh sách user đang chờ phản hồi từ admin
+    const users = {};
+    const waitingUsers = {};
 
     io.on('connection', (socket) => {
         console.log(`User connected: ${socket.id}`);
 
-        // Khi người dùng tham gia phòng
         socket.on('joinRoom', ({ username, room, role }) => {
-            users[socket.id] = username; // Lưu tên người dùng theo socketId
-            socket.join(room);  // Người dùng tham gia vào phòng
-
-            // Nếu là user thì mới gửi tin nhắn chào mừng từ admin
-            if (role === 'user') {
+            users[socket.id] = username;
+            socket.join(room);
+            if (waitingUsers[room]) {
+                socket.emit('loadMessages', waitingUsers[room].messages);
+            } else {
+                waitingUsers[room] = { messages: [], hasWelcomed: false };
+            }
+            if (role === 'user' && !waitingUsers[room].hasWelcomed) {
                 const welcomeMessage = {
                     username: 'Admin',
                     message: 'Xin chào, bạn cần hỗ trợ gì ạ?',
+                    time: getVietnamTime(),
+                    isRead: true,
                 };
-                socket.emit('adminMessage', welcomeMessage);
+                waitingUsers[room].messages.push(welcomeMessage);
+                socket.emit('userMessage', welcomeMessage);
+                waitingUsers[room].hasWelcomed = true;
             }
         });
 
+        socket.on('uploadImage', async (file) => {
+            try {
+                const result = await uploadSocketChatAws(file); // Gọi phương thức upload lên AWS
+                const imageUrl = result.Location; // Lấy URL của hình ảnh đã upload
+                console.log("🚀 ~ file:", file);
+                // Gửi URL hình ảnh tới người dùng trong room
+                io.to(file.room).emit('userMessage', {
+                    username: file.username,
+                    imageUrl,
+                    time: getVietnamTime(),
+                    room: file.room,
+                    isRead: true,
+                    role: file.role,
+                });
+            } catch (error) {
+                console.log("Failed to upload image", error);
+                socket.emit('uploadError', { error: 'Failed to upload image' });
+            }
+        });
+
+
         // Xử lý khi người dùng gửi tin nhắn
-        socket.on('sendMessage', ({ username, message, room, role }) => {
-            console.log(`${username} (Role: ${role}) gửi tin nhắn: ${message} trong phòng: ${room}`);
+        socket.on('sendMessage', ({ username, message, room, role, imageUrl }) => {
+            const currentTime = getVietnamTime();
 
-            // Lấy thời gian gửi tin nhắn
-            const currentTime = new Date().toLocaleTimeString();
-
-            // Thêm user vào danh sách chờ nếu admin chưa phản hồi
-            if (!waitingUsers.includes(username)) {
-                waitingUsers.push(username);
-                io.emit('newMessageFromUser', { name: username, message, time: currentTime, room }); // Gửi sự kiện với thông tin chi tiết
-                console.log(`User ${username} đã gửi tin nhắn và đang chờ phản hồi.`);
+            if (!waitingUsers[room]) {
+                waitingUsers[room] = { messages: [], username };
             }
 
-            // Phát tin nhắn tới tất cả thành viên trong phòng
-            io.to(room).emit('adminMessage', { username, message, time: currentTime, role });
+            // Nếu có hình ảnh thì xử lý gửi tin nhắn hình ảnh
+            if (imageUrl) {
+                waitingUsers[room].messages.push({ username, imageUrl, time: currentTime, room, isRead: true, role });
+                io.emit('newMessageFromUser', { username, imageUrl, time: currentTime, room, isRead: false, role });
+                io.to(room).emit('userMessage', { username, imageUrl, time: currentTime, room, isRead: true, role });
+            } else {
+                // Xử lý gửi tin nhắn văn bản
+                const userMessage = { username, message, time: currentTime, room, isRead: true, role };
+                waitingUsers[room].messages.push(userMessage);
+                io.emit('newMessageFromUser', userMessage);
+                io.to(room).emit('userMessage', userMessage);
+            }
+        });
+
+        // Xử lý yêu cầu lấy lại tin nhắn chờ từ admin
+        socket.on('getWaitingMessages', () => {
+            Object.keys(waitingUsers).forEach((room) => {
+                waitingUsers[room].messages.forEach((waitingMessage) => {
+                    if (!(waitingMessage.username === 'Admin' && waitingMessage.message.includes('Xin chào'))) {
+                        const messageData = {
+                            username: waitingMessage.username,  // Thêm username vào dữ liệu gửi
+                            message: waitingMessage.message,
+                            time: waitingMessage.time,
+                            room: room,
+                            isRead: waitingMessage.isRead,
+                            role: waitingMessage.role,
+                        };
+                        socket.emit('newMessageFromUser', messageData);
+                    }
+                });
+            });
         });
 
         // Xử lý khi admin gửi tin nhắn
-        socket.on('adminMessage', ({ room, message }) => {
-            console.log(`Admin gửi tin nhắn: ${message} trong phòng: ${room}`);
+        socket.on('adminMessage', ({ room, message, role }) => {
+            const currentTime = getVietnamTime();
+            if (!waitingUsers[room]) {
+                waitingUsers[room] = { messages: [] };
+            }
 
-            // Phát tin nhắn từ admin tới người dùng trong phòng
-            io.to(room).emit('userMessage', { username: 'Admin', message });
+            const adminMessage = { username: 'Admin', message, time: currentTime, room, isRead: true, role };
+
+            waitingUsers[room].messages.push(adminMessage);
+
+            io.to(room).emit('userMessage', adminMessage);
         });
 
         // Xử lý khi admin tham gia phòng chat của user
         socket.on('joinUserRoom', ({ admin, user }) => {
             const room = user;
             socket.join(room); // Admin tham gia phòng chat của user
-            console.log(`Admin đã tham gia phòng chat của ${user}`);
+            if (waitingUsers[user]) {
+                waitingUsers[user].messages.forEach((waitingMessage) => {
+                    const messageData = {
+                        username: waitingMessage.username,
+                        message: waitingMessage.message,
+                        time: waitingMessage.time,
+                        room: user,
+                        isRead: waitingMessage.isRead,
+                        role: waitingMessage.role,
+                    };
+                    if (!(waitingMessage.username === 'Admin' && waitingMessage.message.includes('Xin chào'))) {
+                        socket.emit('newMessageFromUser', messageData);
+                    }
+                });
+                waitingUsers[user].messages = waitingUsers[user].messages.map((msg) => {
+                    return {
+                        ...msg,
+                        isRead: true,
+                    };
+                });
+            }
         });
 
         // Khi người dùng ngắt kết nối
         socket.on('disconnect', () => {
             const username = users[socket.id];
             if (username) {
-                Object.keys(rooms).forEach((room) => {
-                    // Xóa người dùng khỏi phòng
-                    rooms[room] = rooms[room].filter(user => user !== username);
-
-                    // Thông báo cho các thành viên khác trong phòng về việc người dùng rời đi
-                    io.to(room).emit('message', `${username} đã rời khỏi phòng.`);
-                    io.to(room).emit('roomData', { room, users: rooms[room] });
-                });
                 console.log(`${username} (ID: ${socket.id}) đã ngắt kết nối.`);
-
-                // Xóa user khỏi danh sách chờ nếu có
-                // const index = waitingUsers.indexOf(username);
-                // if (index !== -1) {
-                //     waitingUsers.splice(index, 1);
-                // }
-
                 delete users[socket.id];
             }
         });

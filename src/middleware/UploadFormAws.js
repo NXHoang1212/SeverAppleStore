@@ -7,6 +7,8 @@ const uploadMulterSingle = multer({ storage: storage }).single('images');
 const uploadAvatar = multer({ storage: storage }).single('photoUrl');
 const uploadMulterMedia = multer({ storage: storage }).array('media', 5);
 
+require('dotenv').config();
+
 const s3 = new S3Client({
     region: process.env.AWS_BUCKET_REGION,
     credentials: {
@@ -18,8 +20,6 @@ console.log("🚀 ~ file: UploadFormAWS.js ~ line 15 ~ s3", s3.config.credential
     accessKeyId: process.env.AWS_ACCESS_KEY,
     secretAccessKey: process.env.AWS_SECRET_KEY
 }))
-
-
 
 const uploadFileAWS = async (file) => {
     const folderName = 'product/';
