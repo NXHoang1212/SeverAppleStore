@@ -28,6 +28,7 @@
     "express": "^4.19.2",
     "fs": "^0.0.1-security",
     "google-auth-library": "^9.13.0",
+    "helmet": "^8.0.0",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",

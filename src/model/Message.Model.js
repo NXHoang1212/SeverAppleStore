@@ -16,10 +16,22 @@ const MessageSchema = new Schema({
         ref: 'users',
         required: true
     },
+    mediaType: {
+        type: String,
+        default: null
+    },
+    mediaUrl: {
+        type: String,
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    read: {
+        type: Boolean,
+        default: false
+    },
 })
 
 const MessageModel = mongoose.model('Messages', MessageSchema);

@@ -1,6 +1,61 @@
 const { Server } = require('socket.io');
 const moment = require('moment');
-const { uploadSocketChatAws } = require('./UploadOtherAws');
+const { JWT } = require('google-auth-library');
+const axios = require('axios');
+const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
+
+const getAccessToken = () => {
+    return new Promise(function (resolve, reject) {
+        const key = require('../../json/service-account.json');
+        const jwtClient = new JWT(
+            key.client_email,
+            null,
+            key.private_key,
+            SCOPES,
+            null
+        );
+        jwtClient.authorize(function (err, tokens) {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(tokens.access_token);
+        });
+    });
+}
+
+const sendNotification = async (fcmTokens, title, body, data) => {
+    let tokens = Array.isArray(fcmTokens) ? fcmTokens : [fcmTokens];
+    for (let token of tokens) {
+        let payload = {
+            message: {
+                token: token,
+                notification: {
+                    title: title,
+                    body: body
+                },
+                data: data
+            }
+        };
+        let config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: 'https://fcm.googleapis.com/v1/projects/signin-e878e/messages:send',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${await getAccessToken()}`
+            },
+            data: JSON.stringify(payload)
+        };
+
+        try {
+            const response = await axios.request(config);
+            console.log('Sent notification:', JSON.stringify(response.data));
+        } catch (error) {
+            console.log('Error sending notification:', error);
+        }
+    }
+}
 
 const getVietnamTime = () => {
     return moment().utcOffset('+0700').format('HH:mm');
@@ -16,6 +71,8 @@ const socketServer = (socketPort) => {
 
     const users = {};
     const waitingUsers = {};
+    let adminFcmTokens = {}; // lưu theo id của admin
+    let userFcmTokens = {};  // lưu theo id của user
 
     io.on('connection', (socket) => {
         console.log(`User connected: ${socket.id}`);
@@ -41,46 +98,120 @@ const socketServer = (socketPort) => {
             }
         });
 
-        socket.on('uploadImage', async (file) => {
-            try {
-                const result = await uploadSocketChatAws(file); // Gọi phương thức upload lên AWS
-                const imageUrl = result.Location; // Lấy URL của hình ảnh đã upload
-                console.log("🚀 ~ file:", file);
-                // Gửi URL hình ảnh tới người dùng trong room
-                io.to(file.room).emit('userMessage', {
-                    username: file.username,
-                    imageUrl,
-                    time: getVietnamTime(),
-                    room: file.room,
-                    isRead: true,
-                    role: file.role,
-                });
-            } catch (error) {
-                console.log("Failed to upload image", error);
-                socket.emit('uploadError', { error: 'Failed to upload image' });
+        // Xử lý khi người dùng gửi hình ảnh
+        socket.on('sendImage', async ({ image, room, username, role, message, userId }) => {
+            const currentTime = getVietnamTime();
+            // Lưu tin nhắn hình ảnh vào waitingUsers
+            if (!waitingUsers[room]) {
+                waitingUsers[room] = { messages: [] };
+            }
+            const imageMessage = {
+                username,
+                time: currentTime,
+                room,
+                message,
+                isRead: true,
+                role,
+                image
+            };
+            waitingUsers[room].messages.push(imageMessage);
+            // Phát lại cho tất cả người dùng trong phòng
+            io.emit('newMessageFromUser', { username, message, time: currentTime, room, isRead: false, role, userId });
+            io.to(room).emit('userImage', { image, username, time: currentTime, room, isRead: true, role, message, userId });
+
+            //xử lý thông báo nếu user hoặc admin gửi ảnh
+            const token = role === 'admin' ? userFcmTokens[userId] : Object.values(adminFcmTokens);
+            console.log("🚀 ~ socket.on ~ token:", token)
+            if (token) {
+                const type = 'image';
+                const title = `Ảnh mới từ ${username}`;
+                const body = message;
+                const data = { type, username, message, time: currentTime, room, role, userId };
+
+                await sendNotification(token, title, body, data);
+            } else {
+                console.log("No FCM token found for user:", userId);
+            }
+        });
+
+        //xử lý khi người dùng gửi file âm thanh 
+        socket.on('sendAudioMessage', async ({ audio, room, username, role, message }) => {
+            const currentTime = getVietnamTime();
+            // Lưu tin nhắn hình ảnh vào waitingUsers
+            if (!waitingUsers[room]) {
+                waitingUsers[room] = { messages: [] };
+            }
+            const audioMessage = {
+                username,
+                time: currentTime,
+                room,
+                message,
+                isRead: true,
+                role,
+                audio
+            };
+            waitingUsers[room].messages.push(audioMessage);
+            // Phát lại cho tất cả người dùng trong phòng
+            io.emit('newMessageFromUser', { username, message, time: currentTime, room, isRead: false, role });
+            io.to(room).emit('userAudio', { audio, username, time: currentTime, room, isRead: true, role, message });
+        });
+
+        //xử lý khi người dùng gửi file video
+        socket.on('sendVideoMessage', ({ video, room, username, role, message }) => {
+            const currentTime = getVietnamTime();
+            // Lưu tin nhắn hình ảnh vào waitingUsers
+            if (!waitingUsers[room]) {
+                waitingUsers[room] = { messages: [] };
+            }
+            const videoMessage = {
+                username,
+                time: currentTime,
+                room,
+                message,
+                isRead: true,
+                role,
+                video
+            };
+            waitingUsers[room].messages.push(videoMessage);
+            // Phát lại cho tất cả người dùng trong phòng
+            io.emit('newMessageFromUser', { username, message, time: currentTime, room, isRead: false, role });
+            io.to(room).emit('userVideo', { video, username, time: currentTime, room, isRead: true, role, message });
+        })
+
+        socket.on('registerFcmToken', ({ fcmToken, role, id }) => {
+            if (role === 'admin') {
+                adminFcmTokens[id] = fcmToken;
+                console.log("🚀 ~ socket.on ~ adminFcmTokens:", adminFcmTokens)
+            } else if (role === 'user') {
+                userFcmTokens[id] = fcmToken;
+                console.log("🚀 ~ socket.on ~ userFcmTokens:", userFcmTokens)
             }
         });
 
 
         // Xử lý khi người dùng gửi tin nhắn
-        socket.on('sendMessage', ({ username, message, room, role, imageUrl }) => {
+        socket.on('sendMessage', async ({ username, message, room, role, userId }) => {
             const currentTime = getVietnamTime();
-
             if (!waitingUsers[room]) {
                 waitingUsers[room] = { messages: [], username };
             }
+            waitingUsers[room].messages.push({ username, message, time: currentTime, isRead: true, room, role, userId });
+            io.emit('newMessageFromUser', { username, message, time: currentTime, room, isRead: false, role, userId });
+            io.to(room).emit('userMessage', { username, message, time: currentTime, room, isRead: true, role, userId });
 
-            // Nếu có hình ảnh thì xử lý gửi tin nhắn hình ảnh
-            if (imageUrl) {
-                waitingUsers[room].messages.push({ username, imageUrl, time: currentTime, room, isRead: true, role });
-                io.emit('newMessageFromUser', { username, imageUrl, time: currentTime, room, isRead: false, role });
-                io.to(room).emit('userMessage', { username, imageUrl, time: currentTime, room, isRead: true, role });
+            // Gửi thông báo đến admin
+            const token = Object.values(adminFcmTokens);
+            console.log("🚀 ~ socket.on ~ token:", token)
+            if (token) {
+                const type = 'messageAdmin';
+                const title = `Tin nhắn mới từ ${username}`;
+                const body = message;
+                const data = { type, username, message, time: currentTime, room, role, userId };
+
+                console.log("🚀 ~ socket.on ~ fcmTokens:", token);
+                await sendNotification(token, title, body, data);
             } else {
-                // Xử lý gửi tin nhắn văn bản
-                const userMessage = { username, message, time: currentTime, room, isRead: true, role };
-                waitingUsers[room].messages.push(userMessage);
-                io.emit('newMessageFromUser', userMessage);
-                io.to(room).emit('userMessage', userMessage);
+                console.log("No admin FCM token found.");
             }
         });
 
@@ -96,6 +227,7 @@ const socketServer = (socketPort) => {
                             room: room,
                             isRead: waitingMessage.isRead,
                             role: waitingMessage.role,
+                            userId: waitingMessage.userId,
                         };
                         socket.emit('newMessageFromUser', messageData);
                     }
@@ -104,17 +236,29 @@ const socketServer = (socketPort) => {
         });
 
         // Xử lý khi admin gửi tin nhắn
-        socket.on('adminMessage', ({ room, message, role }) => {
+        socket.on('adminMessage', async ({ room, message, role, userId }) => {
             const currentTime = getVietnamTime();
             if (!waitingUsers[room]) {
                 waitingUsers[room] = { messages: [] };
             }
-
-            const adminMessage = { username: 'Admin', message, time: currentTime, room, isRead: true, role };
-
+            const adminMessage = { username: 'Admin', message, time: currentTime, room, isRead: true, role, };
             waitingUsers[room].messages.push(adminMessage);
-
             io.to(room).emit('userMessage', adminMessage);
+
+            // Gửi thông báo đến user cụ thể
+            const token = userFcmTokens[userId];  // Lấy token của user từ danh sách
+            console.log("🚀 ~ socket.on ~ token:", token);
+
+            if (token) {
+                const type = 'messageUser'
+                const title = 'Admin gửi tin nhắn mới';
+                const body = message;
+                const data = { type, username: 'Admin', message, time: currentTime, room, role };
+
+                await sendNotification(token, title, body, data);
+            } else {
+                console.log("No FCM token found for user:", userId);
+            }
         });
 
         // Xử lý khi admin tham gia phòng chat của user
@@ -130,10 +274,10 @@ const socketServer = (socketPort) => {
                         room: user,
                         isRead: waitingMessage.isRead,
                         role: waitingMessage.role,
+                        userId: waitingMessage.userId,
+                        fcmToken: userFcmTokens[user]
                     };
-                    if (!(waitingMessage.username === 'Admin' && waitingMessage.message.includes('Xin chào'))) {
-                        socket.emit('newMessageFromUser', messageData);
-                    }
+                   
                 });
                 waitingUsers[user].messages = waitingUsers[user].messages.map((msg) => {
                     return {
@@ -150,6 +294,7 @@ const socketServer = (socketPort) => {
             if (username) {
                 console.log(`${username} (ID: ${socket.id}) đã ngắt kết nối.`);
                 delete users[socket.id];
+
             }
         });
     });

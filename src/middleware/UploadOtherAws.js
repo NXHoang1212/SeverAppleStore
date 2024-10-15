@@ -1,8 +1,6 @@
 const { PutObjectCommand, DeleteObjectsCommand } = require('@aws-sdk/client-s3')
 const { s3 } = require('./UploadFormAws');
-const { Upload } = require('@aws-sdk/lib-storage');
-const fs = require('fs');
-const path = require('path');
+
 
 class UploadOtherAws {
     static async uploadAvatarAws(file) {
@@ -185,26 +183,18 @@ class UploadOtherAws {
     }
 
     static async uploadSocketChatAws(file) {
-        const fileStream = fs.createReadStream(file.uri.replace('file://', '')); // Loại bỏ file:// để lấy đường dẫn thực tế
         const folderName = 'ChatSocket/';
         const uploadParams = {
             Bucket: process.env.AWS_BUCKET_NAME,
-            Key: folderName + file.name,
-            Body: fileStream,
-            ContentType: file.type,
+            Key: folderName + file.originalname,
+            Body: file.buffer,
+            ContentType: file.mimetype, // Đảm bảo rằng mimetype đúng cho video, ví dụ: video/mp4
         };
         try {
-            const upload = new Upload({
-                client: s3Client,
-                params: uploadParams,
-            });
-            // Theo dõi tiến trình upload
-            upload.on('httpUploadProgress', (progress) => {
-                console.log(`Upload progress: ${progress.loaded}/${progress.total}`);
-            });
-
-            const result = await upload.done();  // Chờ khi upload xong
-            return result;
+            const command = new PutObjectCommand(uploadParams);
+            await s3.send(command);
+            const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${folderName}${file.originalname}`;
+            return { Location: fileUrl };
         } catch (error) {
             console.error("🚀 ~ uploadEvaluateAws ~ error", error);
             throw new Error(error);
@@ -213,4 +203,4 @@ class UploadOtherAws {
 }
 
 
-module.expor
+module.exports = UploadOtherAws;
